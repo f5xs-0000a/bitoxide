@@ -16,11 +16,11 @@ Run the following command:
 
 ```bash
 cargo build --release --target wasm32-unknown-unknown
-wasm-bindgen --target web ./target/wasm32-unknown-unknown/debug/bitburner.wasm --out-dir ./wasm_output/
-(echo 'export const wasm_b64 = "' | cat ./wasm_output/bitburner_bg.wasm | base64 -w 0; echo '";') > ./wasm_output/wasm_source.js
+wasm-bindgen --target web ./target/wasm32-unknown-unknown/release/bitoxide.wasm --out-dir ./wasm_output/
+(echo -n 'export const wasm_b64 = "'; cat ./wasm_output/bitoxide_bg.wasm | base64 -w 0; echo '";') > ./wasm_output/wasm_source.js
 ```
 
-Upon executing the commands above, a file `wasm_output/bitburner_b64.txt` will be created. This file can be copied into your BitBurner scripts.
+Upon executing the commands above, a file `wasm_output/wasm_source.txt` will be created. This file can be copied into your BitBurner scripts.
 
 ## Running in BitBurner
 
