@@ -4,39 +4,54 @@ This repository serves as a template and a starting point for BitBurner players 
 
 ## Prerequisites
 
-- Install Rust
+#### Rust
 
-- Install wasm32-unknown-unknown
+Install [Rust](https://rustup.rs/) on your computer. This will allow you to compile the code.
 
-- Install `wasm-bindgen-cli`
+#### `wasm32-unknown-unknown` toolchain
+
+Open your terminal and run this command:
+
+```bash
+rustup target add wasm32-unknown-unknown
+```
+
+This will allow you to compile to WebAssembly.
+
+#### `wasm-bindgen-cli`
+
+On the terminal again, run this command:
+
+```bash
+cargo install wasm-bindgen-cli
+```
 
 ## Building
 
-Run the following command:
+In order to build the program into WASM, run the following:
 
 ```bash
 cargo build --release --target wasm32-unknown-unknown
-wasm-bindgen --target web ./target/wasm32-unknown-unknown/release/bitoxide.wasm --out-dir ./wasm_output/
-(echo -n 'export const wasm_b64 = "'; cat ./wasm_output/bitoxide_bg.wasm | base64 -w 0; echo '";') > ./wasm_output/wasm_source.js
 ```
 
-Upon executing the commands above, a file `wasm_output/wasm_source.txt` will be created. This file can be copied into your BitBurner scripts.
+This will create a file `./target/wasm32-unknown-unknown/release/bitoxide.wasm`. You will then strip down the binary using the following command:
+
+```bash
+wasm-bindgen --target web ./target/wasm32-unknown-unknown/release/bitoxide.wasm --out-dir ./wasm_output/
+```
+
+After that, a `./wasm_output/bitoxide_bg.wasm` file will be created. You will then convert it into base64 using the following command:
+
+```bash
+(echo -n 'export const wasm_b64 = "'; cat ./wasm_output/bitoxide_bg.wasm | base64 -w 0; echo '";') > ./wasm_source.js
+```
 
 ## Running in BitBurner
 
-Use this script below to execute the function exported from WASM:
+After following the Building steps above, you will now have two files that you'll need: `wasm_source.js` and `bitoxide.js`. Copy both of these files into BitBurner while retaining their filenames.
 
-```javascript
-import { wasm_b64 } from "wasm_source.js";
+And all you have to do is to run `bitoxide.js` in BitBurner:
 
-/** @param {NS} ns */
-export async function main(ns) {
-    let wasm_binary = Uint8Array.from(atob(wasm_b64), c => c.charCodeAt(0));
-    await WebAssembly.instantiate(wasm_binary, {})
-        .then(module => {
-            const { add } = module.instance.exports;
-
-            ns.tprint(add(1, 2));
-        });
-}
+```bash
+run bitoxide.js
 ```
