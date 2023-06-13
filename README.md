@@ -10,48 +10,28 @@ Install [Rust](https://rustup.rs/) on your computer. This will allow you to comp
 
 #### `wasm32-unknown-unknown` toolchain
 
-Open your terminal and run this command:
+Open your terminal and run these commands:
 
 ```bash
 rustup target add wasm32-unknown-unknown
-```
-
-This will allow you to compile to WebAssembly.
-
-#### `wasm-bindgen-cli`
-
-On the terminal again, run this command:
-
-```bash
 cargo install wasm-bindgen-cli
+cargo install cargo-post
 ```
+
+These commands will allow you to compile to WebAssembly and do post-build processes. Both will be used.
 
 ## Building
 
-In order to build the program into WASM, run the following:
+To build the program, run the following command:
 
 ```bash
-cargo build --release --target wasm32-unknown-unknown
+cargo post build --release --target wasm32-unknown-unknown
 ```
 
-This will create a file `./target/wasm32-unknown-unknown/release/bitoxide.wasm`. You will then strip down the binary using the following command:
+The build should be listening for a WebSocket connection at port 7953. Open your BitBurner, go to Options, go to Remote API, then set the port number to 7953 then press Connect. This will upload the JavaScript file to BitBurner.
 
-```bash
-wasm-bindgen --target web ./target/wasm32-unknown-unknown/release/bitoxide.wasm --out-dir ./wasm_output/
+After that, run your script in BitBurner.
+
 ```
-
-After that, a `./wasm_output/bitoxide_bg.wasm` file will be created. You will then convert it into base64 using the following command:
-
-```bash
-(echo -n 'export const wasm_b64 = "'; cat ./wasm_output/bitoxide_bg.wasm | base64 -w 0; echo '";') > ./wasm_source.js
-```
-
-## Running in BitBurner
-
-After following the Building steps above, you will now have two files that you'll need: `wasm_source.js` and `bitoxide.js`. Copy both of these files into BitBurner while retaining their filenames.
-
-And all you have to do is to run `bitoxide.js` in BitBurner:
-
-```bash
 run bitoxide.js
 ```
