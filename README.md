@@ -8,7 +8,7 @@ This repository serves as a template and a starting point for BitBurner players 
 
 Install [Rust](https://rustup.rs/) on your computer. This will allow you to compile the code.
 
-#### `wasm32-unknown-unknown` toolchain
+#### WebAssembly and `cargo-post`
 
 Open your terminal and run these commands:
 
