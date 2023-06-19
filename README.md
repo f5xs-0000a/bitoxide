@@ -35,3 +35,13 @@ After that, run your script in BitBurner.
 ```
 run bitoxide.js
 ```
+
+### Copy from `stdout` instead
+
+If opening the Websocket Remote API every build is too much steps for you, one can consider to copy directly from `stdout` and paste the code into the Bitburner editor. This can be shortened by the use of tools like `xclip` or Windows' `clip` by piping the output of the build command into `xclip` or `clip`.
+
+Use this environment variable to enable writing to `stdout`:
+
+```bash
+OUTPUT_MODE=stdout
+```

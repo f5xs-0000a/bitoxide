@@ -17,14 +17,7 @@ use std::{
 
 use base64::write::EncoderWriter;
 use toml::Value;
-use tungstenite::{
-    handshake::server::{
-        ErrorResponse,
-        Request,
-        Response,
-    },
-    protocol::Message,
-};
+use tungstenite::protocol::Message;
 
 fn get_crate_name() -> String {
     let crate_manifest_path = var("CRATE_MANIFEST_PATH")
@@ -219,8 +212,24 @@ fn main() {
     // join the contents of wasm_b64 with the binder output from the bindgen
     join_with_binder(&mut wasm_b64, &*wasm_output, &*crate_name);
 
+    if std::env::var("OUTPUT_MODE").as_deref() == Ok("stdout") {
+        println!("{}", wasm_b64);
+        eprintln!("Written to stdout. Please copy the output.");
+    }
+    else {
+        post_to_websocket(&*wasm_b64, 7953, &*crate_name);
+    }
+}
+
+fn post_to_websocket(
+    contents: &str,
+    port_number: u16,
+    crate_name: &str,
+) {
     // start the websocket server
-    let server = std::net::TcpListener::bind("127.0.0.1:7953").unwrap();
+    let server =
+        std::net::TcpListener::bind(&*format!("127.0.0.1:{}", port_number))
+            .unwrap();
 
     eprintln!("Listening on port 7953...");
 
@@ -234,7 +243,7 @@ fn main() {
         "method": "pushFile",
         "params": {
             "filename": format!("{}.js", crate_name),
-            "content": wasm_b64,
+            "content": contents,
             "server": "home",
         }
     })
@@ -243,14 +252,4 @@ fn main() {
     websocket.write_message(Message::Text(message)).unwrap();
 
     websocket.close(None).unwrap();
-}
-
-fn callback(
-    req: &Request,
-    mut response: Response,
-) -> Result<Response, ErrorResponse> {
-    // Let's add an additional header to our response to the client.
-    let headers = response.headers_mut();
-
-    Ok(response)
 }
