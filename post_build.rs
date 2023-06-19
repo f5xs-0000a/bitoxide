@@ -62,6 +62,7 @@ fn encode_wasm_js_decl(
     wasm_path: &Path,
     wasm_output: &Path,
     crate_name: &str,
+    keep_debug: bool,
 ) -> String {
     struct Writable {
         contents: Vec<u8>,
@@ -124,14 +125,20 @@ fn encode_wasm_js_decl(
     }
 
     // run wasm-bindgen
-    Command::new("wasm-bindgen")
+    let mut command = Command::new("wasm-bindgen");
+    command
         .arg("--target")
         .arg("web")
+        .arg("--no-typescript")
         .arg(&wasm_path)
         .arg("--out-dir")
-        .arg(&wasm_output)
-        .output()
-        .expect("Cannot run wasm-bindgen");
+        .arg(&wasm_output);
+
+    if keep_debug {
+        command.arg("--keep-debug");
+    }
+
+    command.output().expect("Cannot run wasm-bindgen");
 
     let wasm_file = OpenOptions::new()
         .read(true)
@@ -206,13 +213,17 @@ fn main() {
     let wasm_output = crate_target_dir.join("wasm_output");
 
     // read the contents of the javascript file
-    let mut wasm_b64 =
-        encode_wasm_js_decl(&*wasm_path, &*wasm_output, &*crate_name);
+    let mut wasm_b64 = encode_wasm_js_decl(
+        &*wasm_path,
+        &*wasm_output,
+        &*crate_name,
+        var("DEBUG").as_deref() == Ok("true"),
+    );
 
     // join the contents of wasm_b64 with the binder output from the bindgen
     join_with_binder(&mut wasm_b64, &*wasm_output, &*crate_name);
 
-    if std::env::var("OUTPUT_MODE").as_deref() == Ok("stdout") {
+    if var("OUTPUT_MODE").as_deref() == Ok("stdout") {
         println!("{}", wasm_b64);
         eprintln!("Written to stdout. Please copy the output.");
     }

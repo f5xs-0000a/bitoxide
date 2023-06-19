@@ -45,3 +45,13 @@ Use this environment variable to enable writing to `stdout`:
 ```bash
 OUTPUT_MODE=stdout
 ```
+
+### Enable debug symbols
+
+To enable debug symbols and add tracing into panics, use the environment variable below:
+
+```bash
+DEBUG=true
+```
+
+Note that this can increase the output size by over ten times the original size.
