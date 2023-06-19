@@ -67,7 +67,7 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub fn execute_command(
+pub fn main_rs(
     ns: &NS,
     args: Array,
 ) {
