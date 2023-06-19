@@ -1,6 +1,6 @@
-# Template Rust WASM BitBurner Library
+# Template Rust WASM Bitburner Library
 
-This repository serves as a template and a starting point for BitBurner players to use Rust in BitBurner instead of JavaScript by compiling Rust into WebAssembly and then imported into BitBurner's JavaScript.
+This repository serves as a template and a starting point for Bitburner players to use Rust in Bitburner instead of JavaScript by compiling Rust into WebAssembly and then imported into Bitburner's JavaScript.
 
 ## Prerequisites
 
@@ -28,9 +28,9 @@ To build the program, run the following command:
 cargo post build --release --target wasm32-unknown-unknown
 ```
 
-The build should be listening for a WebSocket connection at port 7953. Open your BitBurner, go to Options, go to Remote API, then set the port number to 7953 then press Connect. This will upload the JavaScript file to BitBurner.
+The build should be listening for a WebSocket connection at port 7953. Open your Bitburner, go to Options, go to Remote API, then set the port number to 7953 then press Connect. This will upload the JavaScript file to Bitburner.
 
-After that, run your script in BitBurner.
+After that, run your script in Bitburner.
 
 ```
 run bitoxide.js
