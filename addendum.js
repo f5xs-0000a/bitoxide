@@ -14,5 +14,5 @@ async function __wbg_init() {
 
 export async function main(ns) {
     await __wbg_init();
-    await main_rs(ns, ns.args);
+    await main_rs(ns);
 }
