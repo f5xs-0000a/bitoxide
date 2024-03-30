@@ -83,7 +83,7 @@ pub fn get_attribute<T>(
 }
 
 #[wasm_bindgen]
-pub fn main_rs(ns: &NS) {
+pub async fn main_rs(ns: &NS) {
     let mut buffer = "Hello, world! I said".to_owned();
     let args = get_attribute(ns, "args", |a| Some(js_sys::Array::from(a)))
         .unwrap()
