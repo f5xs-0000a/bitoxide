@@ -18,8 +18,6 @@ cargo install wasm-bindgen-cli
 cargo install --git https://github.com/phil-opp/cargo-post.git
 ```
 
-<!---For now, install `cargo-post` from git because of my [commit](https://github.com/phil-opp/cargo-post/commit/a7a2b65ffd90ae2728d277bc954416cc4e37fae9) that hasn't been published into a version. Once this commit is published into cargo, we revert this.--->
-
 These commands will allow you to compile to WebAssembly and do post-build processes. Both will be used.
 
 ## Building
