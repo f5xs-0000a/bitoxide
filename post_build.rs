@@ -169,6 +169,88 @@ fn join_with_binder(
     wasm_output: &Path,
     crate_name: &str,
 ) {
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "dynamic_ram_bypass")] {
+            let method = join_with_binder_drb;
+        }
+
+        else {
+            let method = join_with_binder_default;
+        }
+    };
+}
+
+fn join_with_binder_drb(
+    js_str: &mut String,
+    wasm_output: &Path,
+    crate_name: &str,
+) {
+    let mut js_str = "EVAL_STR = \" \\\n".to_owned();
+
+    // character escaper
+    let mut line_adder = |s: &str| {
+        for ch in s.chars() {
+            match ch {
+                '"' => {
+                    js_str.push('\\');
+                    js_str.push('"');
+                },
+
+                '\\' => {
+                    js_str.push('\\');
+                    js_str.push('\\');
+                },
+
+                c => js_str.push(c),
+            }
+        };
+    };
+
+    let mut wasm_file = OpenOptions::new()
+        .read(true)
+        .open(wasm_output.join(format!("{}.js", crate_name)))
+        .map(|file| BufReader::new(file))
+        .expect("Cannot open the bundler js file");
+
+    let mut buffer = String::new();
+    loop {
+        buffer.clear();
+        match wasm_file
+            .read_line(&mut buffer)
+            .expect("Cannot read the js file.")
+        {
+            0 => break,
+            _ => {},
+        }
+
+        // stop reading from here. we'll have our own initializer.
+        if buffer.contains("function initSync(module) {") {
+            break;
+        }
+
+        line_adder(&buffer);
+    }
+
+    loop {
+        buffer.clear();
+        match wasm_file.read_line(&mut buffer).unwrap()
+        {
+            0 => break,
+            _ => {},
+        }
+
+        line_adder(&buffer);
+    }
+
+    drop(line_adder);
+    js_str += "\";\neval(EVAL_STR);";
+}
+
+fn join_with_binder_default(
+    js_str: &mut String,
+    wasm_output: &Path,
+    crate_name: &str,
+) {
     let mut wasm_file = OpenOptions::new()
         .read(true)
         .open(wasm_output.join(format!("{}.js", crate_name)))
