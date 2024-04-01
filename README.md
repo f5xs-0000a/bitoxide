@@ -18,8 +18,6 @@ cargo install wasm-bindgen-cli
 cargo install --git https://github.com/phil-opp/cargo-post.git
 ```
 
-<!---For now, install `cargo-post` from git because of my [commit](https://github.com/phil-opp/cargo-post/commit/a7a2b65ffd90ae2728d277bc954416cc4e37fae9) that hasn't been published into a version. Once this commit is published into cargo, we revert this.--->
-
 These commands will allow you to compile to WebAssembly and do post-build processes. Both will be used.
 
 ## Building
@@ -57,3 +55,27 @@ DEBUG=true
 ```
 
 Note that this can increase the output size by over ten times the original size.
+
+### Bypass Dynamic RAM Checker
+
+Using this flag allows you to exploit the dynamic RAM in Bitburner without actually using it at the expense of using `eval` and running slightly slower.
+
+As far as the author of this crate is concerned, there are multiple levels of RAM usage in Bitburner:
+
+1. The initial RAM check performed between invoking thet script and running it. This RAM check is the same as the one that displays how much RAM is used by the script in the in-game editor (located at the bottom of the game window).
+2. The first dynamic RAM check when the script is invoked using `ns.run()`
+3. The second dynamic RAM check which counts how much RAM is being used by the script during runtime.
+
+This feature bypasses the first RAM check because the entire script will be wrapped inside an `eval`. The second RAM check isn't even run because there is no invocation of `ns.run()` nor should you need to invoke it. The third RAM will still keep track of a script's unique calls and add their associated RAM cost into the total RAM usage.
+
+```bash
+DYN_RAM_BYPASS=1
+```
+
+### Bypass RAM costs of `window` and `document`
+
+Similar to above, but bypasses the references to `window` and `document`.
+
+```bash
+DOM_RAM_BYPASS=1
+```
