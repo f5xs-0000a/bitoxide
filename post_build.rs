@@ -169,6 +169,8 @@ fn join_with_binder(
     wasm_output: &Path,
     crate_name: &str,
 ) {
+    use std::env::var as envvar;
+
     use regex::Regex;
 
     let function_invocation_pattern =
@@ -178,6 +180,9 @@ fn join_with_binder(
     let dom_modifier_replace =
         Regex::new(r"addHeapObject\((window|document)\)").unwrap();
     let stop_it = Regex::new(r"(window|document)\.(window|document)").unwrap();
+
+    let dynamic_ram_bypass = envvar("DYN_RAM_BYPASS").is_ok();
+    let dom_ram_bypass = dynamic_ram_bypass && envvar("DOM_RAM_BYPASS").is_ok();
 
     let mut wasm_file = OpenOptions::new()
         .read(true)
@@ -204,19 +209,32 @@ fn join_with_binder(
         let line = std::borrow::Cow::Borrowed(&*buffer);
 
         // remove arguments for those that include document and window
-        let line =
-            main_function_signature.replace(&line, "export function $1($2) {");
+        let line = match dynamic_ram_bypass {
+            true => {
+                main_function_signature
+                    .replace(&line, "export function $1($2) {")
+            },
+            false => line,
+        };
 
         // call `eval` on remote functions instead
         let line = function_invocation_pattern
             .replace(&line, "eval(\"getObject(arg$1).$2\")(");
 
         // replace both mentions of document and window
-        let line = dom_modifier_replace
-            .replace_all(&line, "addHeapObject(eval(\"$1\"))");
+        let line = match dom_ram_bypass {
+            true => {
+                dom_modifier_replace
+                    .replace_all(&line, "addHeapObject(eval(\"$1\"))")
+            },
+            false => line,
+        };
 
         // uggghhh...
-        let line = stop_it.replace_all(&line, "eval(\"$1.$2\")");
+        let line = match dom_ram_bypass {
+            true => stop_it.replace_all(&line, "eval(\"$1.$2\")"),
+            false => line,
+        };
 
         *js_str += &line;
     }
