@@ -169,6 +169,16 @@ fn join_with_binder(
     wasm_output: &Path,
     crate_name: &str,
 ) {
+    use regex::Regex;
+
+    let function_invocation_pattern =
+        Regex::new(r"getObject\(arg(\d+)\).(\w+)\(").unwrap();
+    let main_function_signature =
+        Regex::new(r"^export function (\w+)\((\w+)(?:, *\w+)*\) \{").unwrap();
+    let dom_modifier_replace =
+        Regex::new(r"addHeapObject\((window|document)\)").unwrap();
+    let stop_it = Regex::new(r"(window|document)\.(window|document)").unwrap();
+
     let mut wasm_file = OpenOptions::new()
         .read(true)
         .open(wasm_output.join(format!("{}.js", crate_name)))
@@ -191,7 +201,24 @@ fn join_with_binder(
             break;
         }
 
-        *js_str += &buffer;
+        let line = std::borrow::Cow::Borrowed(&*buffer);
+
+        // remove arguments for those that include document and window
+        let line =
+            main_function_signature.replace(&line, "export function $1($2) {");
+
+        // call `eval` on remote functions instead
+        let line = function_invocation_pattern
+            .replace(&line, "eval(\"getObject(arg$1).$2\")(");
+
+        // replace both mentions of document and window
+        let line = dom_modifier_replace
+            .replace_all(&line, "addHeapObject(eval(\"$1\"))");
+
+        // uggghhh...
+        let line = stop_it.replace_all(&line, "eval(\"$1.$2\")");
+
+        *js_str += &line;
     }
 
     *js_str += include_str!("./addendum.js");
