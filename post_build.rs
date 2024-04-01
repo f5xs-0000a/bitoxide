@@ -169,111 +169,74 @@ fn join_with_binder(
     wasm_output: &Path,
     crate_name: &str,
 ) {
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "dynamic_ram_bypass")] {
-            let method = join_with_binder_drb;
+    use std::env::var as envvar;
+
+    use regex::Regex;
+
+    let function_invocation_pattern =
+        Regex::new(r"getObject\(arg(\d+)\).(\w+)\(").unwrap();
+    let main_function_signature =
+        Regex::new(r"^export function (\w+)\((\w+)(?:, *\w+)*\) \{").unwrap();
+    let dom_modifier_replace =
+        Regex::new(r"addHeapObject\((window|document)\)").unwrap();
+    let stop_it = Regex::new(r"(window|document)\.(window|document)").unwrap();
+
+    let dynamic_ram_bypass = envvar("DYN_RAM_BYPASS").is_ok();
+    let dom_ram_bypass = dynamic_ram_bypass && envvar("DOM_RAM_BYPASS").is_ok();
+
+    let mut wasm_file = OpenOptions::new()
+        .read(true)
+        .open(wasm_output.join(format!("{}.js", crate_name)))
+        .map(|file| BufReader::new(file))
+        .expect("Cannot open the bundler js file");
+
+    let mut buffer = String::new();
+    loop {
+        buffer.clear();
+        match wasm_file
+            .read_line(&mut buffer)
+            .expect("Cannot read the js file.")
+        {
+            0 => break,
+            _ => {},
         }
 
-        else {
-            let method = join_with_binder_default;
+        // stop reading from here. we'll have our own initializer.
+        if buffer.contains("function initSync(module) {") {
+            break;
         }
-    };
-}
 
-fn join_with_binder_drb(
-    js_str: &mut String,
-    wasm_output: &Path,
-    crate_name: &str,
-) {
-    let mut js_str = "EVAL_STR = \" \\\n".to_owned();
+        let line = std::borrow::Cow::Borrowed(&*buffer);
 
-    // character escaper
-    let mut line_adder = |s: &str| {
-        for ch in s.chars() {
-            match ch {
-                '"' => {
-                    js_str.push('\\');
-                    js_str.push('"');
-                },
-
-                '\\' => {
-                    js_str.push('\\');
-                    js_str.push('\\');
-                },
-
-                c => js_str.push(c),
-            }
+        // remove arguments for those that include document and window
+        let line = match dynamic_ram_bypass {
+            true => {
+                main_function_signature
+                    .replace(&line, "export function $1($2) {")
+            },
+            false => line,
         };
-    };
 
-    let mut wasm_file = OpenOptions::new()
-        .read(true)
-        .open(wasm_output.join(format!("{}.js", crate_name)))
-        .map(|file| BufReader::new(file))
-        .expect("Cannot open the bundler js file");
+        // call `eval` on remote functions instead
+        let line = function_invocation_pattern
+            .replace(&line, "eval(\"getObject(arg$1).$2\")(");
 
-    let mut buffer = String::new();
-    loop {
-        buffer.clear();
-        match wasm_file
-            .read_line(&mut buffer)
-            .expect("Cannot read the js file.")
-        {
-            0 => break,
-            _ => {},
-        }
+        // replace both mentions of document and window
+        let line = match dom_ram_bypass {
+            true => {
+                dom_modifier_replace
+                    .replace_all(&line, "addHeapObject(eval(\"$1\"))")
+            },
+            false => line,
+        };
 
-        // stop reading from here. we'll have our own initializer.
-        if buffer.contains("function initSync(module) {") {
-            break;
-        }
+        // uggghhh...
+        let line = match dom_ram_bypass {
+            true => stop_it.replace_all(&line, "eval(\"$1.$2\")"),
+            false => line,
+        };
 
-        line_adder(&buffer);
-    }
-
-    loop {
-        buffer.clear();
-        match wasm_file.read_line(&mut buffer).unwrap()
-        {
-            0 => break,
-            _ => {},
-        }
-
-        line_adder(&buffer);
-    }
-
-    drop(line_adder);
-    js_str += "\";\neval(EVAL_STR);";
-}
-
-fn join_with_binder_default(
-    js_str: &mut String,
-    wasm_output: &Path,
-    crate_name: &str,
-) {
-    let mut wasm_file = OpenOptions::new()
-        .read(true)
-        .open(wasm_output.join(format!("{}.js", crate_name)))
-        .map(|file| BufReader::new(file))
-        .expect("Cannot open the bundler js file");
-
-    let mut buffer = String::new();
-    loop {
-        buffer.clear();
-        match wasm_file
-            .read_line(&mut buffer)
-            .expect("Cannot read the js file.")
-        {
-            0 => break,
-            _ => {},
-        }
-
-        // stop reading from here. we'll have our own initializer.
-        if buffer.contains("function initSync(module) {") {
-            break;
-        }
-
-        *js_str += &buffer;
+        *js_str += &line;
     }
 
     *js_str += include_str!("./addendum.js");
