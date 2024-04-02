@@ -169,21 +169,6 @@ fn join_with_binder(
     wasm_output: &Path,
     crate_name: &str,
 ) {
-    use std::env::var as envvar;
-
-    use regex::Regex;
-
-    let function_invocation_pattern =
-        Regex::new(r"getObject\(arg(\d+)\).(\w+)\(").unwrap();
-    let main_function_signature =
-        Regex::new(r"^export function (\w+)\((\w+)(?:, *\w+)*\) \{").unwrap();
-    let dom_modifier_replace =
-        Regex::new(r"addHeapObject\((window|document)\)").unwrap();
-    let stop_it = Regex::new(r"(window|document)\.(window|document)").unwrap();
-
-    let dynamic_ram_bypass = envvar("DYN_RAM_BYPASS").is_ok();
-    let dom_ram_bypass = dynamic_ram_bypass && envvar("DOM_RAM_BYPASS").is_ok();
-
     let mut wasm_file = OpenOptions::new()
         .read(true)
         .open(wasm_output.join(format!("{}.js", crate_name)))
@@ -206,40 +191,7 @@ fn join_with_binder(
             break;
         }
 
-        let line = std::borrow::Cow::Borrowed(&*buffer);
-
-        // remove arguments for those that include document and window
-        let line = match dynamic_ram_bypass {
-            true => {
-                main_function_signature
-                    .replace(&line, "export function $1($2) {")
-            },
-            false => line,
-        };
-
-        // call `eval` on remote functions instead
-        let line = function_invocation_pattern
-            .replace(&line, "eval(\"getObject(arg$1).$2\")(");
-
-        // replace both mentions of document and window
-        let line = match dom_ram_bypass {
-            true => {
-                dom_modifier_replace
-                    .replace_all(&line, "addHeapObject(eval(\"$1\"))")
-            },
-            false => line,
-        };
-
-        // uggghhh...
-        let line = match dom_ram_bypass {
-            true => stop_it.replace_all(&line, "eval(\"$1.$2\")"),
-            false => line,
-        };
-
-        // bypass exec
-        let line = line.replace(r"/\[object ([^\]]+)\]/.exec", r"eval(`/\[object ([^\]]+)\]/.exec`)");
-
-        *js_str += &line;
+        *js_str += &buffer;
     }
 
     *js_str += include_str!("./addendum.js");
