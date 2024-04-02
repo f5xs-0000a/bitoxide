@@ -236,6 +236,9 @@ fn join_with_binder(
             false => line,
         };
 
+        // bypass exec
+        let line = line.replace(r"/\[object ([^\]]+)\]/.exec", r"eval(`/\[object ([^\]]+)\]/.exec`)");
+
         *js_str += &line;
     }
 
