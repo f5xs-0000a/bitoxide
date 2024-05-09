@@ -75,5 +75,4 @@ Using Rust in Bitburner (or any web-based WASM environment for that matter) has 
 Here are my personal recommendations in effectively creating your own solutions in Rust using this template:
 
 - Read the [`wasm-bindgen` guide](https://rustwasm.github.io/wasm-bindgen/) and check the [`serde_wasm_bindgen` crate](https://docs.rs/serde-wasm-bindgen)
-- Use `futures::future::CatchUnwind` to catch panics then print them using `ns.alert`
 - Create a singular multitool script for all your needs in Bitburner. `clap` comes to mind in making the multitool very usable.
